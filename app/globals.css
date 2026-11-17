@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #fff8e7;
+  --color-ivory: #f5ecd7;
+  --color-linen: #ede1c6;
+  --color-gold: #c9a84c;
+  --color-gold-deep: #8c6b27;
+  --color-ink: #2c2c2c;
+  --color-ink-soft: #5c5446;
+  --color-rose: #b76e79;
+  --color-burgundy: #722f37;
+
+  --font-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-script: var(--font-pinyon), "Snell Roundhand", cursive;
+
+  --ease-silk: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-serif);
+    font-size: 1.125rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-gold) 35%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Rótulo pequeno, caixa alta e espaçado */
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--color-gold-deep);
+  }
+  .hairline {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+    opacity: 0.6;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    min-height: 3rem;
+    padding: 0 1.6rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    border-radius: 0.5rem;
+    transition:
+      background-color 200ms,
+      color 200ms,
+      box-shadow 200ms,
+      transform 200ms;
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .btn-primary {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+  .btn-primary:hover {
+    background: #1f1d1a;
+    box-shadow: 0 10px 24px -14px rgb(44 44 44 / 0.6);
+  }
+  .btn-ghost {
+    border: 1.5px solid color-mix(in srgb, var(--color-gold) 70%, transparent);
+    color: var(--color-gold-deep);
+  }
+  .btn-ghost:hover {
+    background: color-mix(in srgb, var(--color-gold) 12%, transparent);
+  }
+  /* Brilho metálico que atravessa o elemento no hover */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 35%, rgb(255 248 231 / 0.45) 50%, transparent 65%);
+    transform: translateX(-120%);
+    transition: transform 900ms var(--ease-silk);
+    pointer-events: none;
+  }
+  .shimmer:hover::after {
+    transform: translateX(120%);
+  }
+  .field {
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--color-paper);
+    border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+    border-radius: 0.5rem;
+    font-size: 1.05rem;
+    color: var(--color-ink);
+    transition: border-color 200ms;
+  }
+  .field:focus {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+    border-color: var(--color-gold);
+  }
+  .label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-ink-soft);
+  }
+  /* Textura sutil de renda ao fundo */
+  .lace {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23c9a84c' stroke-width='.6' opacity='.35'%3E%3Cpath d='M28 4c6 8 6 16 0 24-6-8-6-16 0-24zM28 52c6-8 6-16 0-24-6 8-6 16 0 24zM4 28c8-6 16-6 24 0-8 6-16 6-24 0zM52 28c-8-6-16-6-24 0 8 6 16 6 24 0z'/%3E%3Ccircle cx='28' cy='28' r='2'/%3E%3C/g%3E%3C/svg%3E");
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
