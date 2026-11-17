@@ -7,7 +7,7 @@ import { WhatsAppIcon } from "./WhatsApp";
 export function Footer() {
   return (
     <footer className="bg-ink text-paper/80">
-      <div className="mx-auto flex max-w-[1280px] flex-col items-center px-6 py-16 text-center">
+      <div className="mx-auto flex max-w-[1280px] flex-col items-center px-6 pt-16 pb-28 text-center sm:pb-16">
         <Monogram className="h-12 text-gold" />
         <p className="mt-5 text-xl font-semibold tracking-[0.3em] text-paper">D&apos;VALLE</p>
         <p className="text-[0.65rem] tracking-[0.55em] text-paper/60">ASSESSORIA</p>
@@ -26,6 +26,12 @@ export function Footer() {
             <Lock className="size-3.5" /> Área restrita
           </Link>
         </div>
+        <p className="mt-5 max-w-md text-xs leading-relaxed text-paper/40">
+          Desenvolvido por <span className="text-paper/60">Alyson Thadeu</span> — Desenvolvedor Responsável ·{" "}
+          <a href="mailto:Alysonthadeu@gmail.com" className="underline-offset-4 hover:text-gold hover:underline">
+            Alysonthadeu@gmail.com
+          </a>
+        </p>
       </div>
     </footer>
   );
