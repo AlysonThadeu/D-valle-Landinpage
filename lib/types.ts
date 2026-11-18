@@ -37,7 +37,7 @@ export type EventItem = {
 };
 
 export function isCategory(value: string): value is EventCategory {
-  return value in EVENT_CATEGORIES;
+  return Object.hasOwn(EVENT_CATEGORIES, value);
 }
 
 export function coverOf(event: EventItem): Photo | undefined {

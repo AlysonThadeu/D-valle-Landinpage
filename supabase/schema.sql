@@ -1,4 +1,5 @@
--- D'VALLE Assessoria: rode uma vez no Supabase (SQL Editor > New query > Run).
+-- D'VALLE Assessoria: rode no Supabase (SQL Editor > New query > Run).
+-- Pode ser executado de novo sem perder dados: só cria o que falta e corrige o bucket.
 
 -- Tabela de eventos
 create table if not exists public.events (
@@ -24,4 +25,19 @@ alter table public.events enable row level security;
 -- Bucket público para as fotos (leitura aberta, gravação apenas pelo servidor)
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('eventos', 'eventos', true, 5242880, array['image/webp', 'image/jpeg'])
-on conflict (id) do nothing;
+on conflict (id) do update set
+  public             = excluded.public,
+  file_size_limit    = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Sessões do painel. Cada login é uma linha: apagar a linha derruba o acesso na hora
+-- (logout, troca de senha). Remover o usuário em Authentication > Users apaga as sessões dele.
+create table if not exists public.admin_sessions (
+  id          uuid primary key,
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  email       text not null,
+  created_at  timestamptz not null default now(),
+  expires_at  timestamptz not null
+);
+create index if not exists admin_sessions_user_id_idx on public.admin_sessions (user_id);
+alter table public.admin_sessions enable row level security;

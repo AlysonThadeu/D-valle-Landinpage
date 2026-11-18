@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { EventForm } from "@/components/admin/EventForm";
+import { requireAdmin } from "@/lib/auth";
 
-export default function NewEventPage() {
+export default async function NewEventPage() {
+  await requireAdmin();
   return (
     <>
       <Link href="/admin" className="inline-flex items-center gap-2 text-ink-soft hover:text-gold-deep">

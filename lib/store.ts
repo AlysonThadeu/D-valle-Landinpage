@@ -15,6 +15,11 @@ export { usingSupabase };
 
 const BUCKET = process.env.SUPABASE_BUCKET || "eventos";
 
+// Na Vercel o disco é somente leitura: sem Supabase, falha logo com uma mensagem clara.
+if (process.env.VERCEL && !usingSupabase) {
+  throw new Error("Configure SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY nas variáveis de ambiente da Vercel.");
+}
+
 export const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "storage");
 export const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 const EVENTS_FILE = path.join(DATA_DIR, "events.json");
@@ -157,7 +162,8 @@ export async function saveEvent(id: string | null, input: EventInput) {
     }
 
     const keep = new Set(event.photos.map((p) => p.id));
-    await deletePhotos((existing?.photos ?? []).filter((p) => !keep.has(p.id)));
+    const removed = (existing?.photos ?? []).filter((p) => !keep.has(p.id));
+    await deletePhotos(notUsedElsewhere(removed, events, event.id));
     return event;
   };
 
@@ -169,15 +175,16 @@ export async function saveEvent(id: string | null, input: EventInput) {
 }
 
 export async function deleteEvent(id: string) {
-  const event = await getEventById(id);
+  const events = await readAll();
+  const event = events.find((e) => e.id === id);
   if (!event) return;
   if (usingSupabase) {
     const { error } = await db().from("events").delete().eq("id", id);
     if (error) throw new Error(`Supabase: ${error.message}`);
   } else {
-    await writeLocal((await readAll()).filter((e) => e.id !== id));
+    await writeLocal(events.filter((e) => e.id !== id));
   }
-  await deletePhotos(event.photos);
+  await deletePhotos(notUsedElsewhere(event.photos, events, id));
 }
 
 /* ---------- Fotos ---------- */
@@ -221,24 +228,60 @@ export async function storePhoto(
   return { id, src: `/media/${names.full}`, thumb: `/media/${names.thumb}`, ...size };
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** Único formato de nome de arquivo que o site gera: <uuid>.ext ou <uuid>-t.ext */
+const SAFE_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:-t)?\.(?:webp|jpg)$/;
+
 function fileNameFromUrl(url: string) {
   return url.split("?")[0].split("/").pop() ?? "";
 }
 
-/** Confere se a foto enviada pelo formulário foi gravada por este site. */
-export function isOwnPhoto(p: Photo) {
-  if (typeof p?.id !== "string" || !/^[a-f0-9-]{36}$/.test(p.id)) return false;
-  if (typeof p.width !== "number" || typeof p.height !== "number") return false;
-  const prefix = usingSupabase ? db().storage.from(BUCKET).getPublicUrl("").data.publicUrl : "/media/";
-  return [p.src, p.thumb].every((u) => typeof u === "string" && u.startsWith(prefix) && fileNameFromUrl(u).startsWith(p.id));
+function photoUrl(name: string) {
+  return usingSupabase ? db().storage.from(BUCKET).getPublicUrl(name).data.publicUrl : `/media/${name}`;
+}
+
+/**
+ * Valida uma foto vinda do formulário e a reconstrói só com dados do servidor.
+ * Os nomes precisam ser exatamente os gerados no upload; os endereços são remontados aqui.
+ */
+export function sanitizePhoto(p: Photo): Photo | null {
+  if (!p || typeof p.id !== "string" || !UUID.test(p.id)) return null;
+  const width = Number(p.width);
+  const height = Number(p.height);
+  if (![width, height].every((n) => Number.isInteger(n) && n > 0 && n <= 4000)) return null;
+  if (typeof p.src !== "string" || typeof p.thumb !== "string") return null;
+
+  const full = fileNameFromUrl(p.src);
+  const thumb = fileNameFromUrl(p.thumb);
+  const ext = full.split(".").pop();
+  if (full !== `${p.id}.${ext}` || thumb !== `${p.id}-t.${ext}` || !SAFE_NAME.test(full)) return null;
+  // o endereço enviado precisa ser o mesmo que o servidor geraria
+  if (p.src.split("?")[0] !== photoUrl(full) || p.thumb.split("?")[0] !== photoUrl(thumb)) return null;
+
+  return { id: p.id, src: photoUrl(full), thumb: photoUrl(thumb), width, height };
+}
+
+/** Fotos que nenhum outro evento usa (evita apagar arquivo compartilhado). */
+function notUsedElsewhere(photos: Photo[], events: EventItem[], exceptId: string) {
+  const used = new Set(events.filter((e) => e.id !== exceptId).flatMap((e) => e.photos.map((p) => p.id)));
+  return photos.filter((p) => !used.has(p.id));
 }
 
 async function deletePhotos(photos: Photo[]) {
-  const names = photos.flatMap((p) => [fileNameFromUrl(p.src), fileNameFromUrl(p.thumb)]).filter(Boolean);
+  const names = photos
+    .flatMap((p) => [fileNameFromUrl(p.src), fileNameFromUrl(p.thumb)])
+    .filter((n) => SAFE_NAME.test(n));
   if (names.length === 0) return;
   if (usingSupabase) {
     await db().storage.from(BUCKET).remove(names);
     return;
   }
-  await Promise.all(names.map((n) => fs.rm(path.join(UPLOAD_DIR, n), { force: true })));
+  const root = path.resolve(UPLOAD_DIR) + path.sep;
+  await Promise.all(
+    names.map((n) => {
+      const target = path.resolve(UPLOAD_DIR, path.basename(n));
+      // nunca apaga nada fora da pasta de uploads
+      return target.startsWith(root) ? fs.rm(target, { force: true }) : undefined;
+    }),
+  );
 }

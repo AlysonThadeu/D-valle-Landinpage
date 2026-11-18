@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getEventById } from "@/lib/store";
+import { requireAdmin } from "@/lib/auth";
 import { EventForm } from "@/components/admin/EventForm";
 
 export default async function EditEventPage({ params }: PageProps<"/admin/eventos/[id]">) {
+  await requireAdmin();
   const { id } = await params;
   const event = await getEventById(id);
   if (!event) notFound();

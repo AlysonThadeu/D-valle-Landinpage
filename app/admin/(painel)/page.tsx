@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { CalendarDays, ImageIcon, MapPin, Plus, Star } from "lucide-react";
 import { listEvents } from "@/lib/store";
+import { requireAdmin } from "@/lib/auth";
 import { EVENT_CATEGORIES, coverOf, formatEventDate } from "@/lib/types";
 
 export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
+  await requireAdmin();
   const { salvo } = await searchParams;
   const events = await listEvents({ includeDrafts: true });
 

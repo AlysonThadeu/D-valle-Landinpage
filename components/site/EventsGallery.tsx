@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, LayoutGroup, motion, useInView } from "framer-motion";
 import { ArrowUpRight, Images, Instagram } from "lucide-react";
@@ -19,6 +19,15 @@ export type EventCard = {
 };
 
 const spring = { type: "spring", stiffness: 120, damping: 20 } as const;
+
+// Dispositivo com mouse (hover) ou toque
+const HOVER_QUERY = "(hover: hover)";
+function subscribeHover(cb: () => void) {
+  const mq = window.matchMedia(HOVER_QUERY);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+const getHover = () => window.matchMedia(HOVER_QUERY).matches;
 
 const ORDER = Object.keys(EVENT_CATEGORIES) as EventCategory[];
 
@@ -126,11 +135,7 @@ function AlbumCard({ event }: { event: EventCard }) {
   const ref = useRef<HTMLAnchorElement>(null);
   const inView = useInView(ref, { amount: 0.7 });
   const [hovered, setHovered] = useState(false);
-  const [canHover, setCanHover] = useState(true);
-
-  useEffect(() => {
-    setCanHover(window.matchMedia("(hover: hover)").matches);
-  }, []);
+  const canHover = useSyncExternalStore(subscribeHover, getHover, () => true);
 
   const open = canHover ? hovered : inView;
   const fan = [

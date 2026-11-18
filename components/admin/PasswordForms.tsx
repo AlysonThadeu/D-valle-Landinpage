@@ -35,19 +35,29 @@ export function ForgotPasswordForm() {
 
 type LinkState = { status: "loading" } | { status: "ok"; token: string; invite: boolean } | { status: "invalid"; message: string };
 
+let linkFromHash: LinkState | undefined;
+
+function readLinkFromHash(): LinkState {
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  const token = params.get("access_token");
+  const error = params.get("error_description");
+  // tira o token da barra de endereço
+  window.history.replaceState(null, "", window.location.pathname);
+  if (token) return { status: "ok", token, invite: params.get("type") === "invite" };
+  return { status: "invalid", message: error?.replace(/\+/g, " ") || "Link inválido ou incompleto." };
+}
+
 export function SetPasswordForm() {
   const [link, setLink] = useState<LinkState>({ status: "loading" });
   const [state, action, pending] = useActionState(setPasswordAction, undefined);
 
   // O Supabase devolve o token no fragmento (#access_token=...&type=invite|recovery)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.hash.slice(1));
-    const token = params.get("access_token");
-    const error = params.get("error_description");
-    // tira o token da barra de endereço
-    window.history.replaceState(null, "", window.location.pathname);
-    if (token) setLink({ status: "ok", token, invite: params.get("type") === "invite" });
-    else setLink({ status: "invalid", message: error?.replace(/\+/g, " ") || "Link inválido ou incompleto." });
+    // Lê o fragmento uma única vez por carregamento (o React pode rodar o efeito duas vezes em dev).
+    if (!linkFromHash || window.location.hash.includes("access_token")) linkFromHash = readLinkFromHash();
+    // Leitura do fragmento da URL (só existe no navegador), por isso fica no efeito.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLink(linkFromHash);
   }, []);
 
   if (link.status === "loading") {

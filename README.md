@@ -31,6 +31,9 @@ As fotos são redimensionadas no próprio navegador (WEBP, 2000px + miniatura de
 ### Acesso
 
 - **Com Supabase (produção):** o login usa o Supabase Auth. Nenhuma senha fica no código ou na Vercel. O administrador recebe um convite por e-mail, cria a própria senha e pode usar "Esqueci minha senha".
+  - Só entra quem estiver em `ADMIN_EMAILS` (e-mails separados por vírgula). Lista vazia = ninguém entra.
+  - Cada login fica registrado na tabela `admin_sessions`: sair, trocar a senha, remover o usuário no Supabase ou tirá-lo de `ADMIN_EMAILS` derruba o acesso na hora.
+  - O link de "definir senha" só aceita tokens de convite/recuperação recentes, e os links de e-mail sempre usam `NEXT_PUBLIC_SITE_URL` (obrigatória).
 - **Sem Supabase (desenvolvimento):** vale o `ADMIN_EMAIL` / `ADMIN_PASSWORD` do `.env.local`.
 
 ### Dados
@@ -43,12 +46,12 @@ Toda a leitura e gravação passa por `lib/store.ts`:
 ## Publicar na Vercel + Supabase
 
 1. Crie um projeto em [supabase.com](https://supabase.com) (região São Paulo).
-2. No **SQL Editor**, rode o conteúdo de [`supabase/schema.sql`](supabase/schema.sql). Ele cria a tabela e o bucket de fotos.
+2. No **SQL Editor**, rode o conteúdo de [`supabase/schema.sql`](supabase/schema.sql). Ele cria as tabelas (`events`, `admin_sessions`) e o bucket de fotos. Pode rodar de novo após atualizações: não apaga dados.
 3. Em **Authentication → Sign In / Providers**, desligue **Allow new users to sign up**. Assim só entra quem for convidado.
 4. Em **Authentication → URL Configuration**, coloque o endereço do site em *Site URL* e adicione `https://SEU-DOMINIO/admin/definir-senha` em *Redirect URLs*.
 5. Em **Project Settings → API**, copie a *Project URL* e a chave *service_role*.
 6. Suba o código para o GitHub e importe o repositório na [Vercel](https://vercel.com/new).
-7. Em **Settings → Environment Variables** da Vercel, cadastre `SESSION_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e `NEXT_PUBLIC_SITE_URL` (veja `.env.example`).
+7. Em **Settings → Environment Variables** da Vercel, cadastre `SESSION_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_EMAILS` e `NEXT_PUBLIC_SITE_URL` (veja `.env.example`).
 8. Faça o deploy e convide o administrador (com as mesmas variáveis no `.env.local`):
 
    ```bash
@@ -56,6 +59,17 @@ Toda a leitura e gravação passa por `lib/store.ts`:
    ```
 
    Também dá para convidar pelo painel do Supabase (Authentication → Users → Invite user).
+
+## Levar álbuns locais para o Supabase
+
+Os eventos cadastrados sem Supabase ficam em `storage/`. Para enviá-los ao Supabase (com as chaves no `.env` e o `schema.sql` já rodado):
+
+```bash
+npm run migrar -- --simular   # confere a conexão e lista o que seria enviado
+npm run migrar                # envia eventos e fotos
+```
+
+Pode rodar de novo sem duplicar nada, e os arquivos locais não são apagados.
 
 ## Estrutura
 
